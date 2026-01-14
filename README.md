@@ -17,11 +17,30 @@ A real-time web dashboard for monitoring your Starlink dish statistics via the l
 
 ## Requirements
 
-- Python 3.8+
 - A Starlink dish on your local network (default: 192.168.100.1)
-- [starlink-grpc-tools](https://github.com/sparky8512/starlink-grpc-tools)
+- Either Docker OR Python 3.8+ with [starlink-grpc-tools](https://github.com/sparky8512/starlink-grpc-tools)
 
-## Installation
+## Quick Start with Docker (Recommended)
+
+```bash
+# Clone the repository
+git clone https://github.com/Zephyr210287/starlink-dashboard.git
+cd starlink-dashboard
+
+# Build and run
+docker build -t starlink-dashboard .
+docker run -d --name starlink-dashboard --network host starlink-dashboard
+```
+
+The dashboard will be available at `http://localhost:8100`
+
+**Note:** `--network host` is required so the container can reach your Starlink dish at 192.168.100.1.
+
+To stop: `docker stop starlink-dashboard`
+
+To restart: `docker start starlink-dashboard`
+
+## Manual Installation
 
 ### 1. Clone this repository
 
