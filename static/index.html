@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Starlink Dashboard</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a12;
+            color: #eee;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #1a1a2e;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .logo svg {
+            width: 40px;
+            height: 40px;
+        }
+        h1 { color: #00d4ff; font-size: 1.5em; }
+        .subtitle { color: #666; font-size: 0.85em; }
+
+        .status-badge {
+            padding: 6px 14px;
+            border-radius: 16px;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.8em;
+        }
+        .status-connected { background: #22c55e; color: #000; }
+        .status-searching { background: #f59e0b; color: #000; }
+        .status-offline { background: #ef4444; color: #fff; }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .refresh-btn {
+            background: #00d4ff;
+            color: #000;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85em;
+        }
+        .refresh-btn:hover { background: #00b8e6; }
+        .last-updated { color: #555; font-size: 0.8em; }
+
+        .cards { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; }
+        .card {
+            background: #12121e;
+            border-radius: 10px;
+            padding: 16px;
+            border: 1px solid #1a1a2e;
+        }
+        .card-3 { grid-column: span 3; }
+        .card-4 { grid-column: span 4; }
+        .card-6 { grid-column: span 6; }
+        .card-8 { grid-column: span 8; }
+        .card-12 { grid-column: span 12; }
+        @media (max-width: 900px) {
+            .card-3, .card-4, .card-6, .card-8 { grid-column: span 12; }
+        }
+
+        .card h2 {
+            color: #00d4ff;
+            font-size: 0.85em;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Big stat display */
+        .big-stat {
+            text-align: center;
+            padding: 10px 0;
+        }
+        .big-stat-value {
+            font-size: 2.5em;
+            font-weight: 700;
+            color: #fff;
+            line-height: 1;
+        }
+        .big-stat-unit {
+            font-size: 0.8em;
+            color: #888;
+            margin-left: 4px;
+        }
+        .big-stat-label {
+            font-size: 0.75em;
+            color: #666;
+            text-transform: uppercase;
+            margin-top: 4px;
+        }
+        .big-stat-sub {
+            font-size: 0.7em;
+            color: #444;
+            margin-top: 2px;
+        }
+
+        /* Color variants */
+        .stat-green .big-stat-value { color: #4ade80; }
+        .stat-blue .big-stat-value { color: #60a5fa; }
+        .stat-yellow .big-stat-value { color: #fbbf24; }
+        .stat-red .big-stat-value { color: #f87171; }
+        .stat-cyan .big-stat-value { color: #22d3ee; }
+
+        /* Stat rows */
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #1a1a2e;
+        }
+        .stat-row:last-child { border-bottom: none; }
+        .stat-label { color: #888; font-size: 0.9em; }
+        .stat-value { font-weight: 600; }
+
+        /* Progress bars */
+        .progress-bar {
+            background: #1a1a2e;
+            border-radius: 4px;
+            height: 8px;
+            overflow: hidden;
+            margin-top: 6px;
+        }
+        .progress-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+        .progress-green { background: linear-gradient(90deg, #22c55e, #4ade80); }
+        .progress-yellow { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+        .progress-red { background: linear-gradient(90deg, #dc2626, #f87171); }
+        .progress-blue { background: linear-gradient(90deg, #2563eb, #60a5fa); }
+        .progress-cyan { background: linear-gradient(90deg, #0891b2, #22d3ee); }
+
+        /* Alerts */
+        .alert-item {
+            padding: 8px 12px;
+            background: #1a1a2e;
+            border-radius: 6px;
+            margin: 6px 0;
+            border-left: 3px solid #f59e0b;
+            font-size: 0.9em;
+        }
+        .alert-ok {
+            border-left-color: #22c55e;
+            color: #4ade80;
+        }
+
+        /* Sparkline */
+        .sparkline {
+            height: 40px;
+            display: flex;
+            align-items: flex-end;
+            gap: 1px;
+            margin-top: 8px;
+        }
+        .sparkline-bar {
+            flex: 1;
+            background: #00d4ff;
+            border-radius: 1px 1px 0 0;
+            min-height: 2px;
+            opacity: 0.7;
+        }
+
+        /* Device info */
+        .device-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .device-item {
+            background: #1a1a2e;
+            padding: 10px;
+            border-radius: 6px;
+        }
+        .device-item-label {
+            font-size: 0.7em;
+            color: #666;
+            text-transform: uppercase;
+        }
+        .device-item-value {
+            font-size: 0.9em;
+            color: #ddd;
+            word-break: break-all;
+        }
+
+        /* Position display */
+        .position-display {
+            display: flex;
+            justify-content: space-around;
+            text-align: center;
+            padding: 10px 0;
+        }
+        .position-item .value {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: #fbbf24;
+        }
+        .position-item .label {
+            font-size: 0.7em;
+            color: #666;
+            text-transform: uppercase;
+        }
+
+        /* Error state */
+        .error-message {
+            background: #2a1515;
+            border: 1px solid #dc2626;
+            border-radius: 8px;
+            padding: 16px;
+            color: #f87171;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="50" cy="50" r="45" stroke="#00d4ff" stroke-width="2"/>
+                    <path d="M50 15 L50 50 L75 65" stroke="#00d4ff" stroke-width="3" stroke-linecap="round"/>
+                    <circle cx="50" cy="50" r="8" fill="#00d4ff"/>
+                    <path d="M20 80 Q50 60 80 80" stroke="#00d4ff" stroke-width="2" fill="none"/>
+                </svg>
+                <div>
+                    <h1>Starlink Dashboard</h1>
+                    <div class="subtitle">192.168.100.1 | <span id="dish-id">Loading...</span></div>
+                </div>
+            </div>
+            <div class="controls">
+                <span id="status-badge" class="status-badge status-offline">Connecting...</span>
+                <button class="refresh-btn" onclick="refresh()">Refresh</button>
+                <span class="last-updated" id="last-updated"></span>
+            </div>
+        </header>
+
+        <div class="cards" id="dashboard">
+            <!-- Row 1: Key metrics -->
+            <div class="card card-3">
+                <h2>Latency</h2>
+                <div class="big-stat stat-cyan" id="latency-stat">
+                    <div class="big-stat-value">--<span class="big-stat-unit">ms</span></div>
+                    <div class="big-stat-label">Current</div>
+                    <div class="big-stat-sub" id="latency-avg">Avg: --</div>
+                </div>
+                <div class="sparkline" id="latency-sparkline"></div>
+            </div>
+
+            <div class="card card-3">
+                <h2>Download</h2>
+                <div class="big-stat stat-green" id="download-stat">
+                    <div class="big-stat-value">--<span class="big-stat-unit">Mbps</span></div>
+                    <div class="big-stat-label">Current</div>
+                    <div class="big-stat-sub" id="download-avg">Avg: --</div>
+                </div>
+                <div class="sparkline" id="download-sparkline"></div>
+            </div>
+
+            <div class="card card-3">
+                <h2>Upload</h2>
+                <div class="big-stat stat-blue" id="upload-stat">
+                    <div class="big-stat-value">--<span class="big-stat-unit">Mbps</span></div>
+                    <div class="big-stat-label">Current</div>
+                    <div class="big-stat-sub" id="upload-avg">Avg: --</div>
+                </div>
+                <div class="sparkline" id="upload-sparkline"></div>
+            </div>
+
+            <div class="card card-3">
+                <h2>Power</h2>
+                <div class="big-stat stat-yellow" id="power-stat">
+                    <div class="big-stat-value">--<span class="big-stat-unit">W</span></div>
+                    <div class="big-stat-label">Current</div>
+                    <div class="big-stat-sub" id="power-range">Range: --</div>
+                </div>
+                <div class="sparkline" id="power-sparkline"></div>
+            </div>
+
+            <!-- Row 2: Status and Position -->
+            <div class="card card-4">
+                <h2>Connection</h2>
+                <div class="stat-row">
+                    <span class="stat-label">State</span>
+                    <span class="stat-value" id="conn-state">--</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Uptime</span>
+                    <span class="stat-value" id="conn-uptime">--</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Drop Rate</span>
+                    <span class="stat-value" id="conn-drop">--</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">SNR</span>
+                    <span class="stat-value" id="conn-snr">--</span>
+                </div>
+            </div>
+
+            <div class="card card-4">
+                <h2>Dish Position</h2>
+                <div class="position-display">
+                    <div class="position-item">
+                        <div class="value" id="pos-azimuth">--</div>
+                        <div class="label">Azimuth</div>
+                    </div>
+                    <div class="position-item">
+                        <div class="value" id="pos-elevation">--</div>
+                        <div class="label">Elevation</div>
+                    </div>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">GPS Satellites</span>
+                    <span class="stat-value" id="pos-gps">--</span>
+                </div>
+            </div>
+
+            <div class="card card-4">
+                <h2>Obstruction</h2>
+                <div class="big-stat" id="obstruction-stat">
+                    <div class="big-stat-value">--<span class="big-stat-unit">%</span></div>
+                    <div class="big-stat-label">Obstructed</div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill progress-green" id="obstruction-bar" style="width: 0%"></div>
+                </div>
+                <div class="stat-row" style="margin-top: 8px;">
+                    <span class="stat-label">Currently Blocked</span>
+                    <span class="stat-value" id="obstruction-current">--</span>
+                </div>
+            </div>
+
+            <!-- Row 3: Device Info and Alerts -->
+            <div class="card card-6">
+                <h2>Device Information</h2>
+                <div class="device-info">
+                    <div class="device-item">
+                        <div class="device-item-label">Hardware</div>
+                        <div class="device-item-value" id="dev-hw">--</div>
+                    </div>
+                    <div class="device-item">
+                        <div class="device-item-label">Software</div>
+                        <div class="device-item-value" id="dev-sw">--</div>
+                    </div>
+                    <div class="device-item">
+                        <div class="device-item-label">Dish ID</div>
+                        <div class="device-item-value" id="dev-id">--</div>
+                    </div>
+                    <div class="device-item">
+                        <div class="device-item-label">Samples</div>
+                        <div class="device-item-value" id="dev-samples">--</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card card-6">
+                <h2>Alerts</h2>
+                <div id="alerts-container">
+                    <div class="alert-item alert-ok">No active alerts</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function formatUptime(seconds) {
+            if (!seconds) return 'N/A';
+            const d = Math.floor(seconds / 86400);
+            const h = Math.floor((seconds % 86400) / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            if (d > 0) return `${d}d ${h}h ${m}m`;
+            if (h > 0) return `${h}h ${m}m`;
+            return `${m}m`;
+        }
+
+        function formatBps(bps) {
+            if (bps >= 1000000) return (bps / 1000000).toFixed(1);
+            if (bps >= 1000) return (bps / 1000).toFixed(1);
+            return bps.toFixed(0);
+        }
+
+        function createSparkline(container, data, color = '#00d4ff') {
+            if (!data || data.length === 0) return;
+            const max = Math.max(...data);
+            container.innerHTML = data.map(v => {
+                const height = max > 0 ? (v / max * 100) : 0;
+                return `<div class="sparkline-bar" style="height: ${height}%; background: ${color};"></div>`;
+            }).join('');
+        }
+
+        function getStatusClass(state) {
+            if (state === 'CONNECTED') return 'status-connected';
+            if (state === 'SEARCHING' || state === 'BOOTING') return 'status-searching';
+            return 'status-offline';
+        }
+
+        function getObstructionColor(percent) {
+            if (percent < 5) return 'progress-green';
+            if (percent < 15) return 'progress-yellow';
+            return 'progress-red';
+        }
+
+        async function refresh() {
+            try {
+                const [statusRes, historyRes] = await Promise.all([
+                    fetch('/api/status').then(r => r.json()),
+                    fetch('/api/history').then(r => r.json())
+                ]);
+
+                if (!statusRes.success) {
+                    document.getElementById('status-badge').textContent = 'Error';
+                    document.getElementById('status-badge').className = 'status-badge status-offline';
+                    return;
+                }
+
+                const status = statusRes.status;
+                const alerts = statusRes.alerts;
+                const stats = historyRes.stats || {};
+
+                // Status badge
+                const state = status.state || 'UNKNOWN';
+                document.getElementById('status-badge').textContent = state;
+                document.getElementById('status-badge').className = `status-badge ${getStatusClass(state)}`;
+
+                // Dish ID
+                const dishId = status.id || 'Unknown';
+                document.getElementById('dish-id').textContent = dishId.substring(0, 20) + '...';
+
+                // Latency
+                const latency = status.pop_ping_latency_ms || 0;
+                document.querySelector('#latency-stat .big-stat-value').innerHTML =
+                    `${latency.toFixed(0)}<span class="big-stat-unit">ms</span>`;
+                if (stats.latency) {
+                    document.getElementById('latency-avg').textContent = `Avg: ${stats.latency.mean.toFixed(0)}ms`;
+                }
+
+                // Download
+                const downBps = status.downlink_throughput_bps || 0;
+                const downMbps = downBps / 1000000;
+                document.querySelector('#download-stat .big-stat-value').innerHTML =
+                    `${downMbps.toFixed(1)}<span class="big-stat-unit">Mbps</span>`;
+                if (stats.download) {
+                    document.getElementById('download-avg').textContent = `Avg: ${(stats.download.mean/1000000).toFixed(1)} Mbps`;
+                }
+
+                // Upload
+                const upBps = status.uplink_throughput_bps || 0;
+                const upMbps = upBps / 1000000;
+                document.querySelector('#upload-stat .big-stat-value').innerHTML =
+                    `${upMbps.toFixed(1)}<span class="big-stat-unit">Mbps</span>`;
+                if (stats.upload) {
+                    document.getElementById('upload-avg').textContent = `Avg: ${(stats.upload.mean/1000000).toFixed(1)} Mbps`;
+                }
+
+                // Power
+                if (stats.power) {
+                    document.querySelector('#power-stat .big-stat-value').innerHTML =
+                        `${stats.power.current.toFixed(0)}<span class="big-stat-unit">W</span>`;
+                    document.getElementById('power-range').textContent =
+                        `${stats.power.min.toFixed(0)} - ${stats.power.max.toFixed(0)} W`;
+                }
+
+                // Sparklines
+                if (stats.recent) {
+                    createSparkline(document.getElementById('latency-sparkline'), stats.recent.latency, '#22d3ee');
+                    createSparkline(document.getElementById('download-sparkline'), stats.recent.download, '#4ade80');
+                    createSparkline(document.getElementById('upload-sparkline'), stats.recent.upload, '#60a5fa');
+                    createSparkline(document.getElementById('power-sparkline'), stats.recent.power, '#fbbf24');
+                }
+
+                // Connection stats
+                document.getElementById('conn-state').textContent = state;
+                document.getElementById('conn-state').style.color = state === 'CONNECTED' ? '#4ade80' : '#f87171';
+                document.getElementById('conn-uptime').textContent = formatUptime(status.uptime);
+                const dropRate = (status.pop_ping_drop_rate || 0) * 100;
+                document.getElementById('conn-drop').textContent = `${dropRate.toFixed(2)}%`;
+                document.getElementById('conn-drop').style.color = dropRate < 1 ? '#4ade80' : dropRate < 5 ? '#fbbf24' : '#f87171';
+                document.getElementById('conn-snr').textContent = status.is_snr_above_noise_floor ? 'Good' : 'Low';
+                document.getElementById('conn-snr').style.color = status.is_snr_above_noise_floor ? '#4ade80' : '#f87171';
+
+                // Position
+                document.getElementById('pos-azimuth').textContent = `${(status.direction_azimuth || 0).toFixed(1)}°`;
+                document.getElementById('pos-elevation').textContent = `${(status.direction_elevation || 0).toFixed(1)}°`;
+                document.getElementById('pos-gps').textContent = `${status.gps_sats || 0} ${status.gps_ready ? '(Ready)' : '(Not Ready)'}`;
+                document.getElementById('pos-gps').style.color = status.gps_ready ? '#4ade80' : '#f87171';
+
+                // Obstruction
+                const obstruction = (status.fraction_obstructed || 0) * 100;
+                document.querySelector('#obstruction-stat .big-stat-value').innerHTML =
+                    `${obstruction.toFixed(1)}<span class="big-stat-unit">%</span>`;
+                document.querySelector('#obstruction-stat .big-stat-value').style.color =
+                    obstruction < 5 ? '#4ade80' : obstruction < 15 ? '#fbbf24' : '#f87171';
+                document.getElementById('obstruction-bar').style.width = `${Math.min(obstruction * 2, 100)}%`;
+                document.getElementById('obstruction-bar').className = `progress-fill ${getObstructionColor(obstruction)}`;
+                document.getElementById('obstruction-current').textContent = status.currently_obstructed ? 'Yes' : 'No';
+                document.getElementById('obstruction-current').style.color = status.currently_obstructed ? '#f87171' : '#4ade80';
+
+                // Device info
+                document.getElementById('dev-hw').textContent = status.hardware_version || '--';
+                document.getElementById('dev-sw').textContent = status.software_version || '--';
+                document.getElementById('dev-id').textContent = status.id || '--';
+                document.getElementById('dev-samples').textContent = stats.samples || '--';
+
+                // Alerts
+                const activeAlerts = [];
+                for (const [key, value] of Object.entries(alerts || {})) {
+                    if (value && key.startsWith('alert_')) {
+                        activeAlerts.push(key.replace('alert_', '').replace(/_/g, ' '));
+                    }
+                }
+                const alertsContainer = document.getElementById('alerts-container');
+                if (activeAlerts.length > 0) {
+                    alertsContainer.innerHTML = activeAlerts.map(a =>
+                        `<div class="alert-item">${a}</div>`
+                    ).join('');
+                } else {
+                    alertsContainer.innerHTML = '<div class="alert-item alert-ok">No active alerts</div>';
+                }
+
+                // Update timestamp
+                document.getElementById('last-updated').textContent = `Updated ${new Date().toLocaleTimeString()}`;
+
+            } catch (err) {
+                console.error('Refresh error:', err);
+                document.getElementById('status-badge').textContent = 'Error';
+                document.getElementById('status-badge').className = 'status-badge status-offline';
+            }
+        }
+
+        // Initial load
+        refresh();
+
+        // Auto-refresh every 5 seconds
+        setInterval(refresh, 5000);
+    </script>
+</body>
+</html>
