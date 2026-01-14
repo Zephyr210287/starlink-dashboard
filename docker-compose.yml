@@ -1,0 +1,50 @@
+services:
+  # Starlink Prometheus Exporter (from starlink-grpc-tools)
+  starlink-exporter:
+    image: ghcr.io/sparky8512/starlink-grpc-tools:latest
+    container_name: starlink-exporter
+    command: >
+      dish_grpc_prometheus.py
+      --address 0.0.0.0
+      --port 9817
+      -t 10
+      status alert_detail
+    restart: unless-stopped
+    network_mode: host
+
+  # Prometheus - time series database
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=90d'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    network_mode: host
+    depends_on:
+      - starlink-exporter
+
+  # Grafana - visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=starlink
+      - GF_USERS_ALLOW_SIGN_UP=false
+    restart: unless-stopped
+    network_mode: host
+    depends_on:
+      - prometheus
+
+volumes:
+  prometheus_data:
+  grafana_data:
