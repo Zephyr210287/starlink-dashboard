@@ -2,7 +2,7 @@
 
 A real-time web dashboard for monitoring your Starlink dish statistics via the local gRPC API.
 
-![Dashboard Screenshot](screenshot.png)
+![Dashboard Screenshot](./screenshot.png)
 
 ## Features
 
